@@ -185,7 +185,36 @@ test('array transformation with collection', function () {
     expect(groupByTribe($characters))->toBe($tribes);
 })->group('collections');
 
-function groupByTribe(array $characters)
+function groupByTribe(array $characters): array
 {
-    // return collect($characters)...
+    $formatted = collect($characters)
+        // We could use lazy here for larger collections to avoid loading everything into memory - but slows down processing for small datasets
+        // ->lazy()
+        ->reject(fn ($character) => $character['is_injured'] ?? false)
+        ->groupBy('tribe')
+        ->mapWithKeys(function ($tribeCharacters, $tribeName) {
+            $damages = $tribeCharacters->pluck('damage');
+
+            return [
+                $tribeName => [
+                    'members' => sortUnique($tribeCharacters->pluck('name')->all()),
+                    'skills'  => sortUnique($tribeCharacters->flatMap->skills),
+                    'regions' => sortUnique($tribeCharacters->pluck('region.name')->all()),
+                    'weapons' => sortUnique($tribeCharacters->flatMap->weapons),
+                    'damage'  => [
+                        'min'     => $damages->min(),
+                        'max'     => $damages->max(),
+                        'average' => (float) $damages->avg(),
+                    ],
+                ],
+            ];
+        })
+        ->toArray();
+
+    return $formatted;
+}
+
+function sortUnique($items): array
+{
+    return collect($items)->unique()->sort()->values()->all();
 }
