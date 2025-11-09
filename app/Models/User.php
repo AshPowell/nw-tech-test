@@ -46,4 +46,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function subscriptions(): MorphMany
+    {
+        return $this->morphMany(Subscription::class, 'subscribable');
+    }
 }
